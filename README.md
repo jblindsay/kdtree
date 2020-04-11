@@ -3,13 +3,18 @@
 **Contents**
 
 1. [Description](#1-description)
-2. [Usage](#2-usage)
+2. [Documentation](#2-documentation)
+3. [Usage](#2-usage)
 
 ## 1 Description
 
 **kdtree** is a pure Nim [k-d tree](https://en.wikipedia.org/wiki/K-d_tree) implementation. k-d trees are data structures for performing efficient spatial query operations on point data sets. This implementation is very flexible, allowing for nearest-neighbour (single and multiple), within-radius (circular search areas), and range (rectangular search areas) spatial queries.
 
-## 2 Usage
+## 2 Documentation
+
+Documentation for `kdtree` can be found [here](https://jblindsay.github.io/kdtree/kdtree.html).
+
+## 3 Usage
 
 ```nim
 import random, strformat
