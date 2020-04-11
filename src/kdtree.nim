@@ -11,10 +11,11 @@
 ##     values = newSeqOfCap[int](numPoints)
 ##     x: float
 ##     y: float
+##     r = initRand(34)
 ## 
 ##   for a in 0..<numPoints:
-##     x = rand(100_000) / 1000
-##     y = rand(100_000) / 1000
+##     x = r.rand(100.0)
+##     y = r.rand(100.0)
 ##     points.add([x, y])
 ##     values.add(a)
 ## 
@@ -24,15 +25,16 @@
 ##   # Perform nearestNeighour searches
 ##   let numSearches = 10_000
 ##   for a in 0..<numSearches:
-##     x = rand(100_000) / 1000
-##     y = rand(100_000) / 1000
+##     x = r.rand(100.0)
+##     y = r.rand(100.0)
 ##     let (pt, values, dist) = tree.nearestNieghbour([x, y])
+##     echo fmt"point={pt}, value={value}, dist={dist}"
 ## 
 ##   # Perform nearestNeighours searches
 ##   let n = 10
 ##   for a in 0..<numSearches:
-##     x = rand(100_000) / 1000
-##     y = rand(100_000) / 1000
+##     x = r.rand(100/0)
+##     y = r.rand(100.0)
 ##     let ret = tree.nearestNieghbours([x, y], n)
 ##     for (pt, value, dist) in ret:
 ##       echo fmt"point={pt}, value={value}, dist={dist}"
@@ -45,7 +47,7 @@
 ##   # Perform withinRange searches
 ##   var 
 ##     min: array[2, float] = [0.0, 0.0]
-##     max: array[2, float] = [100.0, 100.0]
+##     max: array[2, float] = [10.0, 10.0]
 ##     hyperRect = newHyperRectangle(min, max)
 ##   
 ##   var ret = tree.withinRange(hyperRect)

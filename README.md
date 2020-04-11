@@ -27,10 +27,11 @@ var
   values = newSeqOfCap[int](numPoints) 
   x: float
   y: float
+  r = initRand(34)
  
 for a in 0..<numPoints:
-  x = rand(100_000) / 1000
-  y = rand(100_000) / 1000
+  x = r.rand(100.0)
+  y = r.rand(100.0)
   points.add([x, y])
   values.add(a)
  
@@ -40,8 +41,8 @@ var tree = newKdTree[int](points, values)
 
 # The preferred method of tree construction is bulk loading of point data using 'newKdTree'. However, you
 # may also add individual points.
-x = rand(100_000) / 1000
-y = rand(100_000) / 1000
+x = r.rand(100.0)
+y = r.rand(100.0)
 let value = numPoints
 tree.add([x, y], value)
 
@@ -62,15 +63,16 @@ if abs(balance) > 1:
 # Perform nearestNeighour searches
 let numSearches = 10_000
 for a in 0..<numSearches:
-  x = rand(100_000) / 1000
-  y = rand(100_000) / 1000
+  x = r.rand(100.0)
+  y = r.rand(100.0)
   let (pt, values, dist) = tree.nearestNieghbour([x, y])
+  echo fmt"point={pt}, value={value}, dist={dist}"
  
 # Perform nearestNeighours searches
 let n = 10
 for a in 0..<numSearches:
-  x = rand(100_000) / 1000
-  y = rand(100_000) / 1000
+  x = r.rand(100.0)
+  y = r.rand(100.0)
   let ret = tree.nearestNieghbours([x, y], n)
   for (pt, value, dist) in ret:
     echo fmt"point={pt}, value={value}, dist={dist}"
