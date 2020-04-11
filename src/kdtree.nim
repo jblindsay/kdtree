@@ -81,7 +81,7 @@ func newNode[T](point: KdPoint, data: T): KdNode[T] =
     result.point = point
     result.data = data
 
-type KdTree*[T] = ref object
+type KdTree*[T] = object
     ## A k-d tree data structure that allows efficient spatial querying on point distributions. The
     ## Current implementation is designed for 2-D point data, although other dimensionality is possible
     ## simply by modifying the const `K`.
@@ -123,7 +123,7 @@ func newKdTree*[T](points: openArray[KdPoint], data: openArray[T]): KdTree[T] =
     for i in 0..<len(points):
         nodes.add(newNode(points[i], data[i]))
 
-    result = new(KdTree[T])
+    # result = new(KdTree[T])
     result.root = buildTree(nodes)
     result.len = len(nodes)
 
@@ -172,9 +172,7 @@ func height[T](node: var KdNode[T]): int =
     
 func height*[T](tree: var KdTree[T]): int =
     ## Returns the height of the KdTree.
-    if tree == nil:
-        return 0
-
+    
     result = height(tree.root)
 
 func isBalanced*[T](tree: var KdTree[T]): int =
@@ -383,14 +381,14 @@ func withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, square
         for a in 0..high(result):
             result[a][2] = sqrt(result[a][2])
 
-type HyperRectangle* = ref object
+type HyperRectangle* = object
     ## A HyperRectangle is used by the withinRange search function to identify multi-deminsional ranges.
     min*: KdPoint
     max*: KdPoint
 
 func newHyperRectangle*(min: KdPoint, max: KdPoint): HyperRectangle =
     ## Creates a new HyperRectangle
-    new(result)
+    #new(result)
     result.min = min
     result.max = max
 
