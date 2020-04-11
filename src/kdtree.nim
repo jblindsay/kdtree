@@ -114,8 +114,8 @@ func newKdTree*[T](points: openArray[KdPoint], data: openArray[T]): KdTree[T] =
     ## Notice that this should be the preferred way of constructing a KdTree because the resulting
     ## tree will be balanced, which will make for more efficient search operations.
 
-    if len(points) != len(data):
-        raise newException(ValueError, "Points and data arrays must be the same size.")
+    doAssert len(points) == len(data), "Points and data arrays must be the same size."
+    doAssert len(points) > 0, "Point data appears to be empty"
 
     var nodes = newSeqOfCap[KdNode[T]](len(points))
     for i in 0..<len(points):
@@ -259,12 +259,11 @@ func nearestNieghbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
     ## .. code-block:: nim
     ##   let x = 100.0
     ##   let y = 25.0
-    ##   let ret = tree.nearestNieghbours([x, y], 5, squaredDist=false)
+    ##   let ret = tree.nearestNieghbours([x, y], numNeighbours=5, squaredDist=false)
     ##   for (pt, value, dist) in ret:
     ##     echo fmt"point={pt}, value={values}, dist={dist}"
 
-    if numNeighbours <= 0:
-        raise newException(ValueError, "The parameter `numNeighbours` must be larger than zero.")
+    doAssert numNeighbours > 0, "The parameter `numNeighbours` must be larger than zero."
 
     if numNeighbours == 1:
         return @[nearestNieghbour(tree, point, squaredDist)]
@@ -328,8 +327,8 @@ func withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, square
     ## .. code-block:: nim
     ##   let x = 100.0
     ##   let y = 25.0
-    ##   var ret2 = tree.withinRadius([x, y], radius=5.0, squaredDist=false, sortResults=true)
-    ##   for (pt, value, dist) in ret2:
+    ##   var ret = tree.withinRadius([x, y], radius=5.0, squaredDist=false, sortResults=true)
+    ##   for (pt, value, dist) in ret:
     ##      echo fmt"point={pt}, value={value}, dist={dist}"
 
     var 

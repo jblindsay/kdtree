@@ -1,124 +1,163 @@
-import unittest
-import random, times, strformat
+import random, unittest
 import kdtree
 
-test "kdtree tests":
-  randomize()
-
+suite "kdtree test suite":
+  
   let numPoints = 10_000
-  var
+
+  proc getTree(): KdTree[int] = 
+    var
       points = newSeqOfCap[array[2, float]](numPoints)
       values = newSeqOfCap[int](numPoints)
       x: float
       y: float
+      r = initRand(34)
 
-  for a in 0..<numPoints:
-      x = rand(100_000) / 1000
-      y = rand(100_000) / 1000
+    for a in 0..<numPoints:
+      x = r.rand(100.0)
+      y = r.rand(100.0)
       points.add([x, y])
       values.add(a)
 
-  echo fmt"Building tree of {numPoints} random points..."
-  var t0 = epochTime()
-  var tree = newKdTree[int](points, values)
-  var elapsed = epochTime() - t0
-  echo fmt"Tree building elapsed time={elapsed}s"
-  # echo fmt"Tree len={tree.len}"
+    result = newKdTree[int](points, values)
 
-  # perform nearestNeighour searches
-  let numSearches = 10_000
-  t0 = epochTime()
-  for a in 0..<numSearches:
-      x = rand(100_000) / 1000
-      y = rand(100_000) / 1000
-      discard tree.nearestNieghbour([x, y])
-  
-  elapsed = epochTime() - t0
-  echo fmt"{numSearches} NN elapsed time={elapsed}s"
+  proc getSimpleTree(): KdTree[int] =
+    let points = [[2.0, 3.0], [5.0, 4.0], [9.0, 6.0], [4.0, 7.0], [8.0, 1.0], [7.0, 2.0]]
+    let values = [1, 2, 3, 4, 5, 6]
+    result = newKdTree[int](points, values)
 
-  t0 = epochTime()
-  let k = 10
-  for a in 0..<numSearches:
-      x = rand(100_000) / 1000
-      y = rand(100_000) / 1000
-      discard tree.nearestNieghbours([x, y], k)
+  test "Build tree":
+    var
+      points = newSeqOfCap[array[2, float]](numPoints)
+      values = newSeqOfCap[int](numPoints)
+      x: float
+      y: float
+      r = initRand(34)
 
-  elapsed = epochTime() - t0
-  echo fmt"{numSearches} kNN (k={k}) elapsed time={elapsed}s"
+    for a in 0..<numPoints:
+      x = r.rand(100.0)
+      y = r.rand(100.0)
+      points.add([x, y])
+      values.add(a)
 
-  # import strabo/vector/shapefile
-  # import strabo/primitives
-  # let 
-  #     testPointsFile = "/Users/johnlindsay/Documents/data/DigAg/yield/Farms/Roney 2015 Wheat/test_points.shp"
-  #     hyperrectPointsFile = "/Users/johnlindsay/Documents/data/DigAg/yield/Farms/Roney 2015 Wheat/hyperrect.shp"
-  #     inputFile = "/Users/johnlindsay/Documents/data/DigAg/yield/Farms/Roney 2015 Wheat/points_utm.shp"
+    var tree = newKdTree[int](points, values)
 
-  # echo "Reading points..."
+    check(tree.len() == numPoints)
+    check(tree.height() == 14)
+    
+    expect AssertionError:
+      discard points.pop()
+      discard newKdTree[int](points, values)
 
-  # var
-  #     sf = openShapefile(inputFile)
-  #     testPoints = openShapefile(testPointsFile)
-  #     hyperrectPoints = openShapefile(hyperrectPointsFile)
-  #     points = newSeqOfCap[array[K, float]](sf.numRecords)
-  #     values = newSeqOfCap[int](sf.numRecords)
-  #     point: Point
+    expect AssertionError:
+      points.setLen(0)
+      discard newKdTree[int](points, values)
 
-  # for p in 0..<sf.numRecords:
-  #     if sf[p].shapeType != stNull:
-  #         values.add(p+1)
-  #         point = sf[p].points[0]
-  #         points.add([point.x, point.y])
 
-  # echo "Building tree..."
-  # var tree = newKdTree[int](points, values)
+  test "Nearest-neighbour search":
+    var tree = getTree()
+    let (_, value, dist) = tree.nearestNieghbour([50.0, 50.0])
+    check:
+      value == 922 
+      abs(dist - 0.4433013003347581) <= 1E-7
 
-  # echo fmt"tree height: {height(tree)}"
-  # echo fmt"tree len: {len(tree)}"
-  # for p in 0..<testPoints.numRecords:
-  #     if testPoints[p].shapeType != stNull:
-  #         point = testPoints[p].points[0]
-  #         # tree.add([point.x, point.y], len(tree))
-  #         echo fmt"fid={p+1}, x={point.x}, y={point.y}"
+    var tree2 = getSimpleTree()
+    let (_, value2, dist2) = tree2.nearestNieghbour([9.0, 2.0])
+    check:
+      value2 == 5 
+      abs(dist2 - 1.4142135623730951) <= 1E-7
 
-  #         # let (pt, values, dist) = tree.nearestNieghbour([point.x, point.y], squaredDist=false)
-  #         # echo "Nearest Neighbour:"
-  #         # echo fmt"point={pt}, value={values}, dist={dist}"
+  test "Nearest k neighbours search":
+    var tree = getTree()
+    let ret = tree.nearestNieghbours([50.0, 50.0], numNeighbours=5)
+    check:
+      ret[0][1] == 922
+      ret[1][1] == 3110
+      ret[2][1] == 2952
+      ret[3][1] == 8600
+      ret[4][1] == 2899
 
-  #         # var ret = tree.nearestNieghbours([point.x, point.y], 4, squaredDist=false)
-  #         # echo "Nearest 4 Neighbours:"
-  #         # for (pt, value, dist) in ret:
-  #         #     echo fmt"point={pt}, value={value}, dist={dist}"
+      abs(ret[0][2] - 0.4433013003347581) <= 1E-7
+      abs(ret[1][2] - 0.8393964092343354) <= 1E-7
+      abs(ret[2][2] - 1.063584180119476) <= 1E-7
+      abs(ret[3][2] - 1.417832925482809) <= 1E-7
+      abs(ret[4][2] - 1.509771581796524) <= 1E-7
 
-  #         var ret2 = tree.withinRadius([point.x, point.y], radius=5.0, squaredDist=false, sortResults=true)
-  #         echo "Within 5m Range:"
-  #         for (pt, value, dist) in ret2:
-  #             echo fmt"point={pt}, value={value}, dist={dist}"
-          
+    # for (pt, value, dist) in ret:
+    #   echo pt, ", ", value, ", ", dist
 
-  # var 
-  #     hyperRects = newSeq[HyperRectangle]()
-  #     min: array[K, float]
-  #     max: array[K, float]
-  #     hyperRect = 1
-  # for p in 0..<hyperrectPoints.numRecords:
-  #     if hyperrectPoints[p].shapeType != stNull:
-  #         point = hyperrectPoints[p].points[0]
-  #         tree.add([point.x, point.y], len(tree))
-  #         if p mod 2 == 0:
-  #             min[0] = point.x
-  #             min[1] = point.y
-  #         else:
-  #             max[0] = point.x
-  #             max[1] = point.y
-  #             hyperRects.add(newHyperRectangle(min, max))
-  #             var ret = tree.withinRange(hyperRects[hyperRect-1])
-  #             echo fmt"Within HyperRectangle {hyperRect} Range:"
-  #             for (pt, value) in ret:
-  #                 echo fmt"point={pt}, value={value}"
+    var tree2 = getSimpleTree()
+    let ret2 = tree2.nearestNieghbours([9.0, 2.0], 3)
+    check:
+      ret2[0][1] == 5
+      ret2[1][1] == 6
+      ret2[2][1] == 3
 
-  #             hyperRect += 1
+      abs(ret2[0][2] - 1.4142135623730951) <= 1E-7
+      abs(ret2[1][2] - 2.0) <= 1E-7
+      abs(ret2[2][2] - 4.0) <= 1E-7
 
-  # echo fmt"Balance: {tree.isBalanced()}"
-  # tree.rebalance()
-  # echo fmt"After re-balance: {tree.isBalanced()}"
+    # for (pt, value, dist) in ret2:
+    #   echo pt, ", ", value, ", ", dist
 
+  test "Within-radius search":
+    var tree = getTree()
+    let ret = tree.withinRadius([50.0, 50.0], radius=1.5, sortResults=true)
+    
+    check:
+      ret[0][1] == 922
+      ret[1][1] == 3110
+      ret[2][1] == 2952
+      ret[3][1] == 8600
+
+      abs(ret[0][2] - 0.4433013003347581) <= 1E-7
+      abs(ret[1][2] - 0.8393964092343354) <= 1E-7
+      abs(ret[2][2] - 1.063584180119476) <= 1E-7
+      abs(ret[3][2] - 1.417832925482809) <= 1E-7
+
+    # for (pt, value, dist) in ret:
+    #   echo pt, ", ", value, ", ", dist
+
+    var tree2 = getSimpleTree()
+    let ret2 = tree2.withinRadius([9.0, 2.0], radius=3.0, sortResults=true)
+    check:
+      ret2[0][1] == 5
+      ret2[1][1] == 6
+
+      abs(ret2[0][2] - 1.4142135623730951) <= 1E-7
+      abs(ret2[1][2] - 2.0) <= 1E-7
+
+    # for (pt, value, dist) in ret2:
+    #   echo pt, ", ", value, ", ", dist
+
+  test "Within-range test":
+    var
+      tree = getTree()
+      min = [50.0-1.5, 50.0-1.5]
+      max = [50.0+1.5, 50.0+1.5]
+      hyperRect = newHyperRectangle(min, max)
+
+    var ret = tree.withinRange(hyperRect)
+    # for (pt, value) in ret:
+    #   echo "point=", pt, ", value=", value
+
+    check:
+      ret[0][1] == 260
+      ret[1][1] == 9842
+      ret[2][1] == 2952
+      ret[3][1] == 8600
+      ret[4][1] == 3110
+      ret[5][1] == 2899
+      ret[6][1] == 922
+
+    var tree2 = getSimpleTree()
+    min = [4.0, 1.0]
+    max = [9.0, 5.0]
+    hyperRect = newHyperRectangle(min, max)
+    let ret2 = tree2.withinRange(hyperRect)
+    # for (pt, value) in ret2:
+    #   echo "point=", pt, ", value=", value
+    check:
+      ret2[0][1] == 6
+      ret2[1][1] == 5
+      ret2[2][1] == 2
