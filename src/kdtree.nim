@@ -79,12 +79,6 @@ func newNode[T](point: KdPoint, data: T): KdNode[T] =
     result.point = point
     result.data = data
 
-# proc `$`(self: KdNode): string =
-#     echo fmt"point={self.point}, data={self.data}"
-#     echo fmt"split={self.splitDimension}"
-#     if self.left == nil and self.right == nil:
-#         echo "leaf node"
-
 type KdTree*[T] = ref object
     ## A k-d tree data structure that allows efficient spatial querying on point distributions. The
     ## Current implementation is designed for 2-D point data, although other dimensionality is possible
@@ -143,25 +137,20 @@ func add*[T](tree: var KdTree[T], point: KdPoint, data: T) =
         tree.root = node
     else:
         var it = tree.root
-        # echo fmt"node={it.data} root"
         var depth = 0
         while it != nil:
-            # var c = cmp(it.point[it.splitDimension], node.point[it.splitDimension])
-            # if c < 0:
             if node.point[it.splitDimension] <= it.point[it.splitDimension]:
                 if it.left == nil:
                     node.splitDimension = (depth + 1) mod K
                     it.left = node
                     return
                 it = it.left
-                # echo fmt"node={it.data}, left, split={it.splitDimension}"
             else:
                 if it.right == nil:
                     node.splitDimension = (depth + 1) mod K
                     it.right = node
                     return
                 it = it.right
-                # echo fmt"node={it.data}, right, split={it.splitDimension}"
 
             depth += 1
 
@@ -232,7 +221,6 @@ func nearestNieghbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false
         dist: float
         diff: float
         split: int
-        # numVisited = 1
     while stack.len > 0:
         var n = stack.pop()
         dist = point.sqDist(n.point)
@@ -244,28 +232,20 @@ func nearestNieghbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false
         if point[split] <= n.point[split]:
             if n.left != nil:
                 stack.add(n.left)
-                # numVisited += 1
             
             if n.right != nil:
                 diff = point[split] - n.point[split]
                 if minDist > diff*diff:
                     stack.add(n.right)
-                
-                # numVisited += 1
             
         else:
             if n.right != nil:
                 stack.add(n.right)
-                # numVisited += 1
             
             if n.left != nil:
                 diff = point[split] - n.point[split]
                 if minDist > diff*diff:
                     stack.add(n.left)
-                
-                # numVisited += 1
-
-    # echo fmt"numVisited={numVisited}"
 
     if not squaredDist:
         result[2] = sqrt(result[2])
@@ -295,7 +275,6 @@ func nearestNieghbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
         dist: float
         diff: float
         split: int
-        # numVisited = 1
 
     result = newSeqOfCap[(KdPoint, T, float)](numNeighbours)
 
@@ -322,28 +301,20 @@ func nearestNieghbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
         if point[split] < n.point[split]:
             if n.left != nil:
                 stack.add(n.left)
-                # numVisited += 1
             
             if n.right != nil:
                 diff = point[split] - n.point[split]
                 if minDist > diff * diff:
                     stack.add(n.right)
-                
-                # numVisited += 1
             
         else:
             if n.right != nil:
                 stack.add(n.right)
-                # numVisited += 1
             
             if n.left != nil:
                 diff = point[split] - n.point[split]
                 if minDist > diff * diff:
                     stack.add(n.left)
-                
-                # numVisited += 1
-
-    # echo fmt"numVisited={numVisited}"
 
     if not squaredDist:
         for a in 0..<numNeighbours:
@@ -365,7 +336,6 @@ func withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, square
         stack: seq[KdNode[T]] = @[tree.root]
         dist: float
         split: int
-        # numVisited = 1
 
     result = newSeq[(KdPoint, T, float)]()
     
@@ -384,26 +354,18 @@ func withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, square
         if point[split] <= n.point[split]:
             if n.left != nil:
                 stack.add(n.left)
-                # numVisited += 1
             
             if n.right != nil:
                 if radius > abs(point[split] - n.point[split]):
                     stack.add(n.right)
-                
-                # numVisited += 1
             
         else:
             if n.right != nil:
                 stack.add(n.right)
-                # numVisited += 1
             
             if n.left != nil:
                 if radius > abs(point[split] - n.point[split]):
                     stack.add(n.left)
-                
-                # numVisited += 1
-
-    # echo fmt"numVisited={numVisited}"
 
     if len(result) == 0:
         return result
