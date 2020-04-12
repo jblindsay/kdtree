@@ -65,7 +65,7 @@ let numSearches = 10_000
 for a in 0..<numSearches:
   x = r.rand(100.0)
   y = r.rand(100.0)
-  let (pt, values, dist) = tree.nearestNieghbour([x, y])
+  let (pt, values, dist) = tree.nearestNeighbour([x, y])
   echo fmt"point={pt}, value={value}, dist={dist}"
  
 # Perform nearestNeighours searches
@@ -73,7 +73,7 @@ let n = 10
 for a in 0..<numSearches:
   x = r.rand(100.0)
   y = r.rand(100.0)
-  let ret = tree.nearestNieghbours([x, y], n)
+  let ret = tree.nearestNeighbours([x, y], n)
   for (pt, value, dist) in ret:
     echo fmt"point={pt}, value={value}, dist={dist}"
 
