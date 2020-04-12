@@ -56,20 +56,20 @@ suite "kdtree test suite":
 
   test "Nearest-neighbour search":
     var tree = getTree()
-    let (_, value, dist) = tree.nearestNieghbour([50.0, 50.0])
+    let (_, value, dist) = tree.nearestNeighbour([50.0, 50.0])
     check:
       value == 922 
       abs(dist - 0.4433013003347581) <= 1E-7
 
     var tree2 = getSimpleTree()
-    let (_, value2, dist2) = tree2.nearestNieghbour([9.0, 2.0])
+    let (_, value2, dist2) = tree2.nearestNeighbour([9.0, 2.0])
     check:
       value2 == 5 
       abs(dist2 - 1.4142135623730951) <= 1E-7
 
   test "Nearest k neighbours search":
     var tree = getTree()
-    let ret = tree.nearestNieghbours([50.0, 50.0], numNeighbours=5)
+    let ret = tree.nearestNeighbours([50.0, 50.0], numNeighbours=5)
     check:
       ret[0][1] == 922
       ret[1][1] == 3110
@@ -87,7 +87,7 @@ suite "kdtree test suite":
     #   echo pt, ", ", value, ", ", dist
 
     var tree2 = getSimpleTree()
-    let ret2 = tree2.nearestNieghbours([9.0, 2.0], 3)
+    let ret2 = tree2.nearestNeighbours([9.0, 2.0], 3)
     check:
       ret2[0][1] == 5
       ret2[1][1] == 6

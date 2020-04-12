@@ -27,7 +27,7 @@
 ##   for a in 0..<numSearches:
 ##     x = r.rand(100.0)
 ##     y = r.rand(100.0)
-##     let (pt, values, dist) = tree.nearestNieghbour([x, y])
+##     let (pt, values, dist) = tree.nearestNeighbour([x, y])
 ##     echo fmt"point={pt}, value={value}, dist={dist}"
 ## 
 ##   # Perform nearestNeighours searches
@@ -35,7 +35,7 @@
 ##   for a in 0..<numSearches:
 ##     x = r.rand(100/0)
 ##     y = r.rand(100.0)
-##     let ret = tree.nearestNieghbours([x, y], n)
+##     let ret = tree.nearestNeighbours([x, y], n)
 ##     for (pt, value, dist) in ret:
 ##       echo fmt"point={pt}, value={value}, dist={dist}"
 ## 
@@ -186,7 +186,7 @@ func isBalanced*[T](tree: var KdTree[T]): int =
 
 func rebalance*[T](tree: var KdTree[T]) =
     ## Re-balances an unbalanced KdTree. Note that the original tree structure can be 
-    ## complete modified by this function. Use this function after adding a significant
+    ## completely modified by this function. Use this function after adding a significant
     ## number of individual nodes to the tree with the `add` function.
 
     # collect all the tree's nodes
@@ -205,7 +205,7 @@ func rebalance*[T](tree: var KdTree[T]) =
     tree.root = buildTree(nodes)
     tree.len = len(nodes)
 
-func nearestNieghbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false): (KdPoint, T, float) =
+func nearestNeighbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false): (KdPoint, T, float) =
     ## Returns the nearest neighbour of an input target point, the data associated with the nearest neighbour, and the distance
     ## between the target point and the nearest neighbour. Internally, inter-point distances are calculated as squared-distances. 
     ## These are rooted in the return values, which decreases efficency, unless the squaredDist parameter is set to true.
@@ -213,7 +213,7 @@ func nearestNieghbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false
     ## .. code-block:: nim
     ##   let x = 100.0
     ##   let y = 25.0
-    ##   let (pt, values, dist) = tree.nearestNieghbour([x, y], squaredDist=false)
+    ##   let (pt, values, dist) = tree.nearestNeighbour([x, y], squaredDist=false)
 
     var 
         stack: seq[KdNode[T]] = @[tree.root]
@@ -250,7 +250,7 @@ func nearestNieghbour*[T](tree: var KdTree[T], point: KdPoint, squaredDist=false
     if not squaredDist:
         result[2] = sqrt(result[2])
 
-func nearestNieghbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: int, squaredDist=false): seq[(KdPoint, T, float)] =
+func nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: int, squaredDist=false): seq[(KdPoint, T, float)] =
     ## Returns a specified number (`numNeighbours`) of nearest neighbours of a target point (`point`). Each return point 
     ## is accompanied by the associated data, and the distance between the target and return points. Internally, inter-point
     ## distances are calculated as squared-distances. These are rooted in the return values, which decreases efficency, unless
@@ -259,14 +259,14 @@ func nearestNieghbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
     ## .. code-block:: nim
     ##   let x = 100.0
     ##   let y = 25.0
-    ##   let ret = tree.nearestNieghbours([x, y], numNeighbours=5, squaredDist=false)
+    ##   let ret = tree.nearestNeighbours([x, y], numNeighbours=5, squaredDist=false)
     ##   for (pt, value, dist) in ret:
     ##     echo fmt"point={pt}, value={values}, dist={dist}"
 
     doAssert numNeighbours > 0, "The parameter `numNeighbours` must be larger than zero."
 
     if numNeighbours == 1:
-        return @[nearestNieghbour(tree, point, squaredDist)]
+        return @[nearestNeighbour(tree, point, squaredDist)]
 
     var 
         stack: seq[KdNode[T]] = @[tree.root]
