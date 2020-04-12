@@ -133,28 +133,23 @@ func add*[T](tree: var KdTree[T], point: KdPoint, data: T) =
     ## is suboptimal for search operation efficiency. 
 
     var node = newNode(point, data)
+    var it = tree.root
+    var depth = 0
+    while it != nil:
+        if node.point[it.splitDimension] <= it.point[it.splitDimension]:
+            if it.left == nil:
+                node.splitDimension = (depth + 1) mod K
+                it.left = node
+                return
+            it = it.left
+        else:
+            if it.right == nil:
+                node.splitDimension = (depth + 1) mod K
+                it.right = node
+                return
+            it = it.right
 
-    # insert the node into the tree
-    if tree == nil:
-        tree.root = node
-    else:
-        var it = tree.root
-        var depth = 0
-        while it != nil:
-            if node.point[it.splitDimension] <= it.point[it.splitDimension]:
-                if it.left == nil:
-                    node.splitDimension = (depth + 1) mod K
-                    it.left = node
-                    return
-                it = it.left
-            else:
-                if it.right == nil:
-                    node.splitDimension = (depth + 1) mod K
-                    it.right = node
-                    return
-                it = it.right
-
-            depth += 1
+        depth += 1
 
     tree.len += 1
 
@@ -201,7 +196,6 @@ func rebalance*[T](tree: var KdTree[T]) =
             stack.add(n.left)
             stack.add(n.right)
 
-    tree = new(KdTree[T])
     tree.root = buildTree(nodes)
     tree.len = len(nodes)
 

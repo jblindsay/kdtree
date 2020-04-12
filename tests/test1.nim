@@ -53,6 +53,23 @@ suite "kdtree test suite":
       points.setLen(0)
       discard newKdTree[int](points, values)
 
+  test "Balance tree":
+    var 
+      tree = getTree()
+      numPoints = tree.len()
+      r = initRand(34)
+      x: float
+      y: float
+      
+    for a in 0..<1000:
+      x = r.rand(20.0)
+      y = r.rand(20.0)
+      tree.add([x, y], numPoints+a)
+
+    check(tree.isBalanced() == 8)
+
+    tree.rebalance()
+    check(tree.isBalanced == 0)
 
   test "Nearest-neighbour search":
     var tree = getTree()
