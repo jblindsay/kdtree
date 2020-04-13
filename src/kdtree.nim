@@ -112,9 +112,10 @@ func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
         result = nil
 
 func newKdTree*[T](points: openArray[KdPoint], data: openArray[T]): KdTree[T] =
-    ## Constructs a k-d tree with a bulk-loading of points and associated data values of type `T`.
-    ## Notice that this should be the preferred way of constructing a KdTree because the resulting
-    ## tree will be balanced, which will make for more efficient search operations.
+    ## Constructs a k-d tree by bulk-loading arrays of points and associated data values of any generic 
+    ## type `T`. Notice that this way of constructing a KdTree, should be preferred over adding points 
+    ## individually, because the resulting tree will be balanced, which will make for more efficient 
+    ## search operations.
 
     doAssert len(points) == len(data), "Points and data arrays must be the same size."
     doAssert len(points) > 0, "Point data appears to be empty"
@@ -123,7 +124,21 @@ func newKdTree*[T](points: openArray[KdPoint], data: openArray[T]): KdTree[T] =
     for i in 0..<len(points):
         nodes.add(newNode(points[i], data[i]))
 
-    # result = new(KdTree[T])
+    result.root = buildTree(nodes)
+    result.len = len(nodes)
+
+func newKdTree*[T](pointData: openArray[(KdPoint, T)]): KdTree[T] =
+    ## Constructs a k-d tree by bulk-loading an array of point-data tuples, where the associated data is 
+    ## of any generic type `T`.Notice that this way of constructing a KdTree, should be preferred over 
+    ## adding points individually, because the resulting tree will be balanced, which will make for more 
+    ## efficient search operations.
+
+    doAssert len(pointData) > 0, "Point data appears to be empty"
+
+    var nodes = newSeqOfCap[KdNode[T]](len(pointData))
+    for p in pointData:
+        nodes.add(newNode(p[0], p[1]))
+
     result.root = buildTree(nodes)
     result.len = len(nodes)
 

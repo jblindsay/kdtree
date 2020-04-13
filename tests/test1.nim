@@ -22,9 +22,8 @@ suite "kdtree test suite":
     result = newKdTree[int](points, values)
 
   proc getSimpleTree(): KdTree[int] =
-    let points = [[2.0, 3.0], [5.0, 4.0], [9.0, 6.0], [4.0, 7.0], [8.0, 1.0], [7.0, 2.0]]
-    let values = [1, 2, 3, 4, 5, 6]
-    result = newKdTree[int](points, values)
+    let pointsAndValues = [([2.0, 3.0], 1), ([5.0, 4.0], 2), ([9.0, 6.0], 3), ([4.0, 7.0], 4), ([8.0, 1.0], 5), ([7.0, 2.0], 6)]
+    result = newKdTree[int](pointsAndValues)
 
   test "Build tree":
     var
