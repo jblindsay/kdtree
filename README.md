@@ -80,7 +80,7 @@ for a in 0..<numSearches:
 # Perform a withinRadius search
 x = 50.0
 y = 50.0
-var ret2 = tree.withinRadius([x, y], radius=5.0, squaredDist=false, sortResults=true)
+var ret2 = tree.withinRadius([x, y], radius=5.0, sortResults=true)
 for (pt, value, dist) in ret2:
   echo fmt"point={pt}, value={value}, dist={dist}"
  
