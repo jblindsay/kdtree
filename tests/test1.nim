@@ -5,7 +5,7 @@ suite "kdtree test suite":
   
   let numPoints = 10_000
 
-  proc getTree(): KdTree[int] = 
+  proc getTree(): KdTree[int, 2] = 
     var
       pointData = newSeqOfCap[(array[2, float], int)](numPoints)
       x: float
@@ -17,16 +17,16 @@ suite "kdtree test suite":
       y = r.rand(100.0)
       pointData.add(([x, y], a))
 
-    result = newKdTree[int](pointData)
+    result = newKdTree[int, 2](pointData)
 
-  proc getSimpleTree(): KdTree[int] =
+  proc getSimpleTree(): KdTree[int, 2] =
     let pointsAndValues = [([2.0, 3.0], 1), 
                           ([5.0, 4.0], 2), 
                           ([9.0, 6.0], 3), 
                           ([4.0, 7.0], 4), 
                           ([8.0, 1.0], 5), 
                           ([7.0, 2.0], 6)]
-    result = newKdTree[int](pointsAndValues)
+    result = newKdTree[int, 2](pointsAndValues)
 
   test "Build tree":
     var
@@ -42,18 +42,18 @@ suite "kdtree test suite":
       points.add([x, y])
       values.add(a)
 
-    var tree = newKdTree[int](points, values)
+    var tree = newKdTree[int, 2](points, values)
 
     check(tree.len() == numPoints)
     check(tree.height() == 14)
-    
+
     expect AssertionError:
       discard points.pop()
-      discard newKdTree[int](points, values)
+      discard newKdTree[int, 2](points, values)
 
     expect AssertionError:
       points.setLen(0)
-      discard newKdTree[int](points, values)
+      discard newKdTree[int, 2](points, values)
 
   test "Balance tree":
     var 
@@ -83,7 +83,7 @@ suite "kdtree test suite":
 
     proc myDistFunc(self, other: array[2, float]): float =
       result = 0.0
-      for i in 0..<K:
+      for i in 0..<2:
         result += (self[i] - other[i]) * (self[i] - other[i])
       result = sqrt(result)
 
@@ -93,7 +93,7 @@ suite "kdtree test suite":
       points.add([x, y])
       values.add(a)
 
-    var tree = newKdTree[int](points, values, distFunc=myDistFunc)
+    var tree = newKdTree[int, 2](points, values, distFunc=myDistFunc)
 
     let (_, value, dist) = tree.nearestNeighbour([50.0, 50.0])
     check:
