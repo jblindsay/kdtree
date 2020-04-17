@@ -1,6 +1,6 @@
 # Package
 
-version       = "1.0.1"
+version       = "1.0.2"
 author        = "John Lindsay"
 description   = "A pure Nim k-d tree implementation."
 license       = "MIT"

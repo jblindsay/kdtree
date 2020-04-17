@@ -149,7 +149,10 @@ suite "kdtree test suite":
 
   test "Within-radius search":
     var tree = getTree()
-    let ret = tree.withinRadius([50.0, 50.0], radius=1.5, sortResults=true)
+    let ret = tree.withinRadius([50.0, 50.0], radius=1.5*1.5, sortResults=true)
+
+    # for (pt, value, dist) in ret:
+    #   echo pt, ", ", value, ", ", dist
     
     check:
       ret[0][1] == 922
@@ -162,11 +165,12 @@ suite "kdtree test suite":
       abs(ret[2][2] - 1.131211308200418) <= 1E-7
       abs(ret[3][2] - 2.01025020458314) <= 1E-7
 
-    # for (pt, value, dist) in ret:
+    var tree2 = getSimpleTree()
+    let ret2 = tree2.withinRadius([9.0, 2.0], radius=3.0*3.0, sortResults=true)
+
+    # for (pt, value, dist) in ret2:
     #   echo pt, ", ", value, ", ", dist
 
-    var tree2 = getSimpleTree()
-    let ret2 = tree2.withinRadius([9.0, 2.0], radius=3.0, sortResults=true)
     check:
       ret2[0][1] == 5
       ret2[1][1] == 6
@@ -174,8 +178,6 @@ suite "kdtree test suite":
       abs(ret2[0][2] - 2.0) <= 1E-7
       abs(ret2[1][2] - 4.0) <= 1E-7
 
-    # for (pt, value, dist) in ret2:
-    #   echo pt, ", ", value, ", ", dist
 
   test "Within-range test":
     var
