@@ -20,7 +20,9 @@
 ##     values.add(a)
 ## 
 ##   echo fmt"Building tree of {numPoints} random points..."
-##   var tree = newKdTree[int](points, values)
+## 
+##   # Create a 2-D tree of int's
+##   var tree = newKdTree[2, int](points, values)
 ## 
 ##   # Perform nearestNeighour searches
 ##   let numSearches = 10_000
@@ -39,7 +41,8 @@
 ##     for (pt, value, dist) in ret:
 ##       echo fmt"point={pt}, value={value}, dist={dist}"
 ## 
-##   # Perform withinRadius searches
+##   # Perform withinRadius searches; notice that the radius distance should use 
+##   # the same distance metric as distFunc. The default is squared distance.
 ##   var ret2 = tree.withinRadius([point.x, point.y], radius=5.0, sortResults=true)
 ##   for (pt, value, dist) in ret2:
 ##     echo fmt"point={pt}, value={value}, dist={dist}"
@@ -55,49 +58,45 @@
 ##     echo fmt"point={pt}, value={value}"
 
 import algorithm, math
-# import strformat
 
-const K* = 2
-  ## K is the dimensionality of the points in this package's K-D trees.
-
-type KdPoint* = 
+type KdPoint*[K: static[int]] =
       array[K, float]
       ## A KdPoint is a location in K-dimensional space.
 
 # sqrDist returns the square distance between two points.
-func sqrDist(self, other: KdPoint): float =
+func sqrDist[K: static[int]](self, other: KdPoint[K]): float =
     result = 0.0
     for i in 0..<K:
         result += (self[i] - other[i]) * (self[i] - other[i])
 
-type DistFunc* = 
-    proc (x, y: KdPoint): float {.closure.}
-    ## A distance function used to calculate the distance between two KdPoints, returning a float
+type DistFunc*[K: static[int]] = 
+    proc (x, y: KdPoint[K]): float {.closure.}
+    ## The signature of a distance function used to calculate the distance between two KdPoints, 
+    ## returning a float. The default DistFunc is `sqrDist`, which returns the squared-distance.
 
-type KdNode[T] = ref object
-    left, right: KdNode[T]
-    point: KdPoint
+type KdNode[K: static[int]; T] = ref object
+    left, right: KdNode[K, T]
+    point: KdPoint[K]
     data: T
     splitDimension: int
 
-func newNode[T](point: KdPoint, data: T): KdNode[T] =
+func newNode[K: static[int]; T](point: KdPoint[K], data: T): KdNode[K, T] =
     new(result)
     result.point = point
     result.data = data
 
-type KdTree*[T] = object
-    ## A k-d tree data structure that allows efficient spatial querying on point distributions. The
-    ## Current implementation is designed for 2-D point data, although other dimensionality is possible
-    ## simply by modifying the const `K`.
-    root*: KdNode[T]
+type KdTree*[K: static[int]; T] = object
+    ## A k-d tree data structure that allows efficient spatial querying on point distributions.
+    ## The tree can hold any generic type `T` data associated with each `K` dimensional point.
+    root*: KdNode[K, T]
     len: int
-    distFunc: DistFunc
+    distFunc: DistFunc[K]
 
-func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
+proc buildTree[K: static[int]; T](nodes: var seq[KdNode[K, T]], depth = 0): KdNode[K, T] =
     let numPoints = len(nodes)
     if numPoints > 1:
         let split = depth mod K
-        proc kdNodeCmp(x, y: KdNode[T]): int =
+        proc kdNodeCmp(x, y: KdNode[K, T]): int =
             if x.point[split] < y.point[split]: -1
             elif x.point[split] == y.point[split]: 0
             else: 1
@@ -105,6 +104,7 @@ func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
         nodes.sort(kdNodeCmp)
         let m = (numPoints / 2).int
         result = nodes[m]
+        # echo fmt"point={result.point}, data={result.data}"
 
         result.splitDimension = split
         var left = nodes[0..m-1]
@@ -113,82 +113,86 @@ func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
         result.right = buildTree(right, depth+1)
     elif numPoints == 1:
         result = nodes[0]
+        # echo fmt"leaf point={result.point}, data={result.data}"
     else:
         result = nil
 
-func newKdTree*[T](pointData: openArray[(KdPoint, T)], distFunc: DistFunc = sqrDist): KdTree[T] =
+proc newKdTree*[K: static[int]; T](pointData: openArray[(KdPoint[K], T)], distFunc: DistFunc[K] = sqrDist): KdTree[K, T] =
     ## Constructs a k-d tree by bulk-loading an array of point-data tuples, where the associated data is 
     ## of any generic type `T`. Notice that this way of constructing a KdTree should be preferred over 
     ## adding points individually because the resulting tree will be balanced, which will make for more 
-    ## efficient search operations. The default `distFunc` is the squared distance, which is returned from each
-    ## search function.
+    ## efficient search operations. The default `distFunc` is the squared distance, which is returned from
+    ## most search functions (except `withinRange`).
     ## 
     ## .. code-block:: nim
     ##  let pointsAndValues = [([2.0, 3.0], 1), 
-    ##                        ([5.0, 4.0], 2), 
+    ##                        ([5.0, s4.0], 2), 
     ##                        ([9.0, 6.0], 3), 
     ##                        ([4.0, 7.0], 4), 
     ##                        ([8.0, 1.0], 5), 
     ##                        ([7.0, 2.0], 6)]
     ## 
-    ##  var tree = newKdTree[int](pointsAndValues)
+    ##  # Create a 2-D tree of int's
+    ##  var tree = newKdTree[2, int](pointsAndValues)
     ##  
     ##  # A custom distance function; the default is a squared distance
-    ##  proc myDistFunc(self, other: array[2, float]): float =
+    ##  proc myDistFunc(p1, p2: array[2, float]): float {.closure.} =
     ##    result = 0.0
-    ##    for i in 0..<len(self):
-    ##      result += (self[i] - other[i]) * (self[i] - other[i])
+    ##    for i in 0..<len(p1):
+    ##      result += (p1[i] - p2[i]) * (p1[i] - p2[i])
     ##    result = sqrt(result)
     ##
-    ##  var tree = newKdTree[int](pointsAndValues, distFunc=myDistFunc)
+    ##  tree = newKdTree[2, int](pointsAndValues, distFunc=myDistFunc)
 
     doAssert len(pointData) > 0, "Point data appears to be empty"
 
-    var nodes = newSeqOfCap[KdNode[T]](len(pointData))
+    var nodes = newSeqOfCap[KdNode[K, T]](len(pointData))
     for p in pointData:
-        nodes.add(newNode(p[0], p[1]))
+        nodes.add(newNode[K, T](p[0], p[1]))
 
     result.root = buildTree(nodes)
     result.len = len(nodes)
     result.distFunc = distFunc
 
-func newKdTree*[T](points: openArray[KdPoint], data: openArray[T], distFunc: DistFunc = sqrDist): KdTree[T] =
+proc newKdTree*[K: static[int]; T](points: openArray[KdPoint[K]], data: openArray[T], distFunc: DistFunc[K] = sqrDist): KdTree[K, T] =
     ## Constructs a k-d tree by bulk-loading arrays of points and associated data values of any generic 
     ## type `T`. Notice that this way of constructing a KdTree should be preferred over adding points 
     ## individually because the resulting tree will be balanced, which will make for more efficient 
-    ## search operations. The default `distFunc` is the squared distance, which is returned from each
-    ## search function.
+    ## search operations. The default `distFunc` is the squared distance, which is returned from
+    ## most search functions (except `withinRange`).
     ## 
     ## .. code-block:: nim
     ##  let points = [[2.0, 3.0], [5.0, 4.0], [9.0, 6.0], [4.0, 7.0], [8.0, 1.0], [7.0, 2.0]]
     ##  let values = [1, 2, 3, 4, 5, 6]
     ## 
-    ##  var tree = newKdTree[int](points, values)
+    ##  # Create a 2-D tree of int's
+    ##  var tree = newKdTree[2, int](points, values)
     ## 
     ##  # A custom distance function; the default is a squared distance
-    ##  proc myDistFunc(self, other: array[2, float]): float =
+    ##  proc myDistFunc(p1, p2: array[2, float]): float {.closure.} =
     ##    result = 0.0
-    ##    for i in 0..<len(self):
-    ##      result += (self[i] - other[i]) * (self[i] - other[i])
+    ##    for i in 0..<len(p1):
+    ##      result += (p1[i] - p2[i]) * (p1[i] - p2[i])
     ##    result = sqrt(result)
     ##
-    ##  var tree = newKdTree[int](points, values, distFunc=myDistFunc)
+    ##  tree = newKdTree[2, int](points, values, distFunc=myDistFunc)
 
     doAssert len(points) == len(data), "Points and data arrays must be the same size."
     doAssert len(points) > 0, "Point data appears to be empty"
 
-    var nodes = newSeqOfCap[KdNode[T]](len(points))
+    var nodes = newSeqOfCap[KdNode[K, T]](len(points))
     for i in 0..<len(points):
-        nodes.add(newNode(points[i], data[i]))
+        nodes.add(newNode[K, T](points[i], data[i]))
 
     result.root = buildTree(nodes)
     result.len = len(nodes)
     result.distFunc = distFunc
 
-func add*[T](tree: var KdTree[T], point: KdPoint, data: T) = 
-    ## This function can be used to add single points, and their associated data of type `T`
-    ## to an existing KdTree object. Notice that this can result in an unbalanced tree which
-    ## is suboptimal for search operation efficiency. 
+func add*[K: static[int]; T](tree: var KdTree[K, T], point: KdPoint[K], data: T) = 
+    ## This function can be used to add single points, and their associated data of any 
+    ## generic type `T` to an existing KdTree object. Notice that this can result in an 
+    ## unbalanced tree which is suboptimal for search operation efficiency. Use the 
+    ## `rebalance` function after adding a batch of individual points to the tree.
 
     var node = newNode(point, data)
     var it = tree.root
@@ -211,11 +215,11 @@ func add*[T](tree: var KdTree[T], point: KdPoint, data: T) =
 
     tree.len += 1
 
-func len*[T](tree: KdTree[T]): int = 
+func len*[K: static[int]; T](tree: KdTree[K, T]): int = 
   ## Returns the number of nodes contained within the KdTree.
   tree.len
 
-func height[T](node: var KdNode[T]): int =
+func height[K: static[int]; T](node: var KdNode[K, T]): int =
     if node == nil:
         return 0
 
@@ -223,12 +227,12 @@ func height[T](node: var KdNode[T]): int =
     var rht = node.right.height()
     result = max(lht, rht) + 1
     
-func height*[T](tree: var KdTree[T]): int =
+func height*[K: static[int]; T](tree: var KdTree[K, T]): int =
     ## Returns the height of the KdTree.
     
     result = height(tree.root)
 
-func isBalanced*[T](tree: var KdTree[T]): int =
+func isBalanced*[K: static[int]; T](tree: var KdTree[K, T]): int =
     ## Returns the value of the left tree height - right tree height. The larger the 
     ## value magnitude, the more unbalanced the tree is (some say an unbalanced tree 
     ## is any with an absolute magnitude greater than 1). The sign indicates the direction
@@ -237,15 +241,15 @@ func isBalanced*[T](tree: var KdTree[T]): int =
 
     result = height(tree.root.left) - height(tree.root.right)
 
-func rebalance*[T](tree: var KdTree[T]) =
+func rebalance*[K: static[int]; T](tree: var KdTree[K, T]) =
     ## Re-balances an unbalanced KdTree. Note that the original tree structure can be 
-    ## completely modified by this function. Use this function after adding a significant
-    ## number of individual nodes to the tree with the `add` function.
+    ## completely modified by this function. Use this function after adding a batch
+    ## of individual nodes to the tree using the `add` function.
 
     # collect all the tree's nodes
-    var nodes = newSeqOfCap[KdNode[T]](len(tree))
+    var nodes = newSeqOfCap[KdNode[K, T]](len(tree))
 
-    var stack: seq[KdNode[T]] = @[tree.root]
+    var stack: seq[KdNode[K, T]] = @[tree.root]
     while stack.len > 0:
         var n = stack.pop()
         if n != nil:
@@ -257,27 +261,27 @@ func rebalance*[T](tree: var KdTree[T]) =
     tree.root = buildTree(nodes)
     tree.len = len(nodes)
 
-proc nearestNeighbour*[T](tree: var KdTree[T], point: KdPoint): (KdPoint, T, float) =
-    ## Returns the nearest neighbour of an input target point, the data associated with the nearest neighbour, and the distance
-    ## between the target point and the nearest neighbour. Notice that the returned distance
-    ## uses the distance metric based on the `distFunc` parameter when the tree is created. By default, and if
+proc nearestNeighbour*[K: static[int]; T](tree: var KdTree[K, T], point: KdPoint[K]): (KdPoint[K], T, float) =
+    ## Returns the nearest neighbour of an input target point, the data associated with the nearest neighbour, 
+    ## and the distance between the target point and the nearest neighbour. Notice that the returned distance
+    ## uses the distance metric based on the distFunc parameter when the tree is created. By default, and if
     ## unspecified, this metric is the squared distance.
     ## 
     ## .. code-block:: nim
     ##   let x = 100.0
     ##   let y = 25.0
-    ##   let (pt, values, dist) = tree.nearestNeighbour([x, y])
+    ##   let (pt, value, dist) = tree.nearestNeighbour([x, y])
+    ##   echo fmt"point={pt}, value={value}, dist={dist}"
 
     var 
-        stack: seq[KdNode[T]] = @[tree.root]
+        stack: seq[KdNode[K, T]] = @[tree.root]
         minDist: float = Inf
         dist: float
         diff: float
         split: int
-        p1: array[K, float]
-        p2: array[K, float]
     while stack.len > 0:
         var n = stack.pop()
+        # echo fmt"{n.point}, {n.data}"
         dist = tree.distFunc(point, n.point)
         if dist < minDist:
             minDist = dist
@@ -289,12 +293,8 @@ proc nearestNeighbour*[T](tree: var KdTree[T], point: KdPoint): (KdPoint, T, flo
                 stack.add(n.left)
             
             if n.right != nil:
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                # diff = point[split] - n.point[split]
-                # if minDist > diff*diff:
-                if minDist > diff:
+                diff = point[split] - n.point[split]
+                if minDist > diff*diff:
                     stack.add(n.right)
             
         else:
@@ -302,18 +302,14 @@ proc nearestNeighbour*[T](tree: var KdTree[T], point: KdPoint): (KdPoint, T, flo
                 stack.add(n.right)
             
             if n.left != nil:
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                # diff = point[split] - n.point[split]
-                # if minDist > diff*diff:
-                if minDist > diff:
+                diff = point[split] - n.point[split]
+                if minDist > diff*diff:
                     stack.add(n.left)
 
-proc nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: int): seq[(KdPoint, T, float)] =
+proc nearestNeighbours*[K: static[int]; T](tree: var KdTree[K, T], point: KdPoint[K], numNeighbours: int): seq[(KdPoint[K], T, float)] =
     ## Returns a specified number (`numNeighbours`) of nearest neighbours of a target point (`point`). Each return point 
     ## is accompanied by the associated data, and the distance between the target and return points. Notice that the 
-    ## returned distance uses the distance metric based on the `distFunc` parameter when the tree is created. By default, 
+    ## returned distance uses the distance metric based on the distFunc parameter when the tree is created. By default, 
     ## and if unspecified, this metric is the squared distance.
     ## 
     ## .. code-block:: nim
@@ -321,7 +317,7 @@ proc nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
     ##   let y = 25.0
     ##   let ret = tree.nearestNeighbours([x, y], numNeighbours=5)
     ##   for (pt, value, dist) in ret:
-    ##     echo fmt"point={pt}, value={values}, dist={dist}"
+    ##     echo fmt"point={pt}, value={value}, dist={dist}"
 
     doAssert numNeighbours > 0, "The parameter `numNeighbours` must be larger than zero."
 
@@ -329,15 +325,13 @@ proc nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
         return @[nearestNeighbour(tree, point)]
 
     var 
-        stack: seq[KdNode[T]] = @[tree.root]
+        stack: seq[KdNode[K, T]] = @[tree.root]
         minDist: float = Inf
         dist: float
         diff: float
         split: int
-        p1: array[K, float]
-        p2: array[K, float]
 
-    result = newSeqOfCap[(KdPoint, T, float)](numNeighbours)
+    result = newSeqOfCap[(KdPoint[K], T, float)](numNeighbours)
 
     while stack.len > 0:
         var n = stack.pop()
@@ -364,12 +358,8 @@ proc nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
                 stack.add(n.left)
             
             if n.right != nil:
-                # diff = point[split] - n.point[split]
-                # if minDist > diff * diff:
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                if minDist > diff:
+                diff = point[split] - n.point[split]
+                if minDist > diff * diff:
                     stack.add(n.right)
             
         else:
@@ -377,21 +367,16 @@ proc nearestNeighbours*[T](tree: var KdTree[T], point: KdPoint, numNeighbours: i
                 stack.add(n.right)
             
             if n.left != nil:
-                # diff = point[split] - n.point[split]
-                # if minDist > diff * diff:
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                if minDist > diff:
+                diff = point[split] - n.point[split]
+                if minDist > diff * diff:
                     stack.add(n.left)
 
-proc withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, sortResults=false): seq[(KdPoint, T, float)] =
+proc withinRadius*[K: static[int]; T](tree: var KdTree[K, T], point: KdPoint[K], radius: float, sortResults=false): seq[(KdPoint[K], T, float)] =
     ## Returns all of the points contained in the tree that are within a specified radius of a target point. By default, the
     ## returned points are in an arbitrary order, unless the `sortResults` parameter is set to true, in which case the return
     ## points will be sorted from nearest to farthest from the target. Notice that the returned distance uses the distance 
-    ## metric based on the `distFunc` parameter when the tree is created. By default, and if unspecified, this metric is the 
-    ## squared distance. Importantly, the `radius` parameter must be a distance measured using the same distance metric as
-    ## specified by the `distFunc` parameter when the tree is created.
+    ## metric based on the distFunc parameter when the tree is created. By default, and if unspecified, this metric is the 
+    ## squared distance.
     ## 
     ## .. code-block:: nim
     ##   let x = 100.0
@@ -401,22 +386,21 @@ proc withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, sortRe
     ##      echo fmt"point={pt}, value={value}, dist={dist}"
 
     var 
-        stack: seq[KdNode[T]] = @[tree.root]
+        stack: seq[KdNode[K, T]] = @[tree.root]
         dist: float
         split: int
-        p1: array[K, float]
-        p2: array[K, float]
-        diff: float
 
-    result = newSeq[(KdPoint, T, float)]()
+    result = newSeq[(KdPoint[K], T, float)]()
     
     if radius <= 0:
         return result
+
+    let sqRadius = radius * radius
     
     while stack.len > 0:
         var n = stack.pop()
         dist = tree.distFunc(point, n.point)
-        if dist <= radius:
+        if dist <= sqRadius:
             result.add((n.point, n.data, dist))
 
         split = n.splitDimension
@@ -425,11 +409,7 @@ proc withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, sortRe
                 stack.add(n.left)
             
             if n.right != nil:
-                # if radius > abs(point[split] - n.point[split]):
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                if radius > diff:
+                if radius > abs(point[split] - n.point[split]):
                     stack.add(n.right)
             
         else:
@@ -437,36 +417,31 @@ proc withinRadius*[T](tree: var KdTree[T], point: KdPoint, radius: float, sortRe
                 stack.add(n.right)
             
             if n.left != nil:
-                # if radius > abs(point[split] - n.point[split]):
-                p1[0] = point[split]
-                p2[0] = n.point[split]
-                diff = tree.distFunc(p1, p2)
-                if radius > diff:
+                if radius > abs(point[split] - n.point[split]):
                     stack.add(n.left)
 
     if len(result) == 0:
         return result
 
     if sortResults:
-        proc kdNodeCmp(x, y: (KdPoint, T, float)): int =
+        proc kdNodeCmp(x, y: (KdPoint[K], T, float)): int =
                 if x[2] < y[2]: -1
                 elif x[2] == y[2]: 0
                 else: 1
 
         result.sort(kdNodeCmp)
 
-type HyperRectangle* = object
+type HyperRectangle*[K: static[int]] = object
     ## A HyperRectangle is used by the withinRange search function to identify multi-deminsional ranges.
-    min*: KdPoint
-    max*: KdPoint
+    min*: KdPoint[K]
+    max*: KdPoint[K]
 
-func newHyperRectangle*(min: KdPoint, max: KdPoint): HyperRectangle =
+func newHyperRectangle*[K: static[int]](min: KdPoint[K], max: KdPoint[K]): HyperRectangle[K] =
     ## Creates a new HyperRectangle
-    #new(result)
     result.min = min
     result.max = max
 
-func withinRange*[T](tree: var KdTree[T], rectangle: HyperRectangle): seq[(KdPoint, T)] =
+func withinRange*[K: static[int]; T](tree: var KdTree[K, T], rectangle: HyperRectangle): seq[(KdPoint[K], T)] =
     ## Returns all of the points contained in the tree that are within a target HyperRectangle. 
     ## 
     ## .. code-block:: nim
@@ -480,11 +455,11 @@ func withinRange*[T](tree: var KdTree[T], rectangle: HyperRectangle): seq[(KdPoi
     ##     echo fmt"point={pt}, value={value}"
 
     var 
-        stack: seq[KdNode[T]] = @[tree.root]
+        stack: seq[KdNode[K, T]] = @[tree.root]
         split: int
         withinRange: bool
 
-    result = newSeq[(KdPoint, T)]()
+    result = newSeq[(KdPoint[K], T)]()
     
     for i in 0..<K:
         if rectangle.max[i] <= rectangle.min[i]:
