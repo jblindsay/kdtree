@@ -95,7 +95,7 @@ type KdTree*[T] = object
 
 func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
     let numPoints = len(nodes)
-    if numPoints > 1:
+    if numPoints > 2:
         let split = depth mod K
         proc kdNodeCmp(x, y: KdNode[T]): int =
             if x.point[split] < y.point[split]: -1
@@ -111,6 +111,16 @@ func buildTree[T](nodes: var seq[KdNode[T]], depth = 0): KdNode[T] =
         result.left = buildTree(left, depth+1)
         var right = nodes[m+1..high(nodes)]
         result.right = buildTree(right, depth+1)
+    elif numPoints == 2:
+        let split = depth mod K
+        if nodes[0].point[split] > nodes[1].point[split]:
+            result = nodes[1]
+            result.right = nodes[0]
+        else:
+            result = nodes[0]
+            result.right = nodes[1]
+
+        result.left = nil
     elif numPoints == 1:
         result = nodes[0]
     else:
@@ -142,7 +152,7 @@ func newKdTree*[T](pointData: openArray[(KdPoint, T)], distFunc: DistFunc = sqrD
     ##
     ##  var tree = newKdTree[int](pointsAndValues, distFunc=myDistFunc)
 
-    doAssert len(pointData) > 0, "Point data appears to be empty"
+    doAssert len(pointData) > 0, "The point data appears to be empty."
 
     var nodes = newSeqOfCap[KdNode[T]](len(pointData))
     for p in pointData:
